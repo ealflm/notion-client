@@ -1,3 +1,5 @@
+// #region url change event
+
 class UrlChangeEvent extends Event {
   constructor(option = {}) {
     super('urlchangeevent', { cancelable: true, ...option });
@@ -106,15 +108,11 @@ window.addEventListener('beforeunload', function (e) {
     return confirmationMessage
   }
 });
+// #endregion
 
-window.addEventListener('urlchangeevent', function (event) {
-  const url = event.newURL
-  if (!url.searchParams.has('pvs')) {
-    console.log('Url changed to: ' + url)
-  }
-});
+// #region init update button
 
-function insertButton() {
+function getUpdateButton() {
   // Create the button element
   var updateButton = document.createElement('button');
   updateButton.className = 'update-button';
@@ -127,7 +125,7 @@ function insertButton() {
   // Create the text element
   var textElement = document.createElement('span');
   textElement.textContent = 'Update';
-  
+
   // Add the spinner and text elements to the button
   updateButton.appendChild(spinner);
   updateButton.appendChild(document.createTextNode(' ')); // Add a space between the spinner and the text
@@ -150,22 +148,83 @@ function insertButton() {
     }, 2000);
   });
 
-  // Get the target element where you want to insert the button
-  var targetElement = document.querySelector("#notion-app > div > div:nth-child(1) > div > div:nth-child(2) > div:nth-child(1) > div.notion-topbar > div > div.notion-topbar-action-buttons > div:nth-child(2)");
-
-  // Check if the target element exists
-  if (targetElement) {
-    // Insert the button as the third child of the target element
-    targetElement.insertBefore(updateButton, targetElement.children[2]);
-    return true;
-  }
-  return false;
+  return updateButton;
 }
 
-var observer = new MutationObserver(function (mutations) {
-  if (insertButton()) {
+var query = [
+  "#notion-app > div > div:nth-child(1) > div > div:nth-child(2) > div:nth-child(1) > div.notion-topbar > div > div.notion-topbar-action-buttons > div:nth-child(2)",
+  "#notion-app > div > div:nth-child(1) > div > div.notion-peek-renderer > div > div:nth-child(2) > div:nth-child(1) > div:nth-child(3)",
+  "#notion-app > div > div.notion-overlay-container.notion-default-overlay-container > div:nth-child(2) > div > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(3)"
+]
+
+function getPageType(url) {
+  var pm = url.searchParams.get('pm')
+
+  var pageType = 0
+  if (pm == 'c') {
+    pageType = 2
+  } if (pm == 's') {
+    pageType = 1
+  }
+
+  return pageType;
+}
+
+function insertButton(pageType) {
+  console.log('1. insert call')
+  var updateButton = getUpdateButton();
+  var observer = new MutationObserver(function (mutations) {
+    console.log('2. observer call')
+    var targetElement = document.querySelector(query[pageType]);
+    if (targetElement != null) {
+      if (document.querySelectorAll(query[pageType] + " > .update-button").length == 0) {
+        console.log('3. new button insert -> ' + pageType)
+        try {
+          targetElement.insertBefore(updateButton, targetElement.querySelector('div.notion-topbar-share-menu').nextElementSibling);
+        } catch (e) {
+        }
+      } else {
+        console.log('3. button already exists -> ' + pageType)
+      }
+    }
     observer.disconnect();
+  });
+  observer.observe(document.documentElement, { childList: true, subtree: true });
+}
+
+// #endregion
+
+// #region add button by url change event
+
+window.addEventListener('urlchangeevent', function (event) {
+  const url = event.newURL
+  if (url.href.includes('ealflm') && !url.searchParams.has('pvs')) {
+    console.log('URL HAS CHANGED TO: ' + url.href)
+    insertButton(getPageType(url))
   }
 });
 
-observer.observe(document.documentElement, { childList: true, subtree: true });
+// #endregion
+
+// #region add button by first load page
+
+const checkTargetElement = () => {
+  var url = new URL(window.location.href);
+
+  var pageType = getPageType(url);
+  const targetElement = document.querySelector(query[pageType] + " > div.notion-topbar-share-menu");
+  console.log('pageType is: ' + pageType)
+
+  if (targetElement !== null) {
+    console.log("Target element found!");
+    insertButton(pageType);
+    clearInterval(interval);
+  } else {
+    console.log("Target element not found yet.");
+  }
+};
+
+const intervalTime = 200;
+const interval = setInterval(checkTargetElement, intervalTime);
+
+// #endregion
