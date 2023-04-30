@@ -19,7 +19,8 @@
     },
     "permissions": [
         "scripting",
-        "activeTab"
+        "activeTab",
+        "webNavigation"
     ],
     "background": {
         "service_worker": "service-worker.js"
@@ -31,16 +32,6 @@
             ],
             "css": [
                 "styles/content.css"
-            ],
-            "matches": [
-                "https://*.notion.so/*"
-            ]
-        }
-    ],
-    "web_accessible_resources": [
-        {
-            "resources": [
-                "scripts/url-change-event.js"
             ],
             "matches": [
                 "https://*.notion.so/*"
